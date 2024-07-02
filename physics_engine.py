@@ -12,19 +12,23 @@ pygame.init()
 WIDTH, HEIGHT = 1000, 800
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
-#배경 그리기
-def draw(space, window, draw_options):
-    window.fill("white")
-    space.debug_draw(draw_options)
-    pygame.display.update()
-
 #마우스가 그리는 선 길이
 def calculate_distance(p1,p2):
-    return math.sqrt((p2[1] - p1[1])**2 + (p2[0] - p2[1])**2)
+    return math.sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2)
 
 #그 길이 앵글
 def calculate_angle(p1,p2):
-    return math.atan2(p2[1] - p1[1] , p2[0] - p2[1])
+    return math.atan2(p2[1] - p1[1] , p2[0] - p1[0])
+
+#배경 그리기
+def draw(space, window, draw_options,line):
+    window.fill("white")
+
+    if line:
+        pygame.draw.line(window, "black", line[0], line[1], 3)#3은 두께
+
+    space.debug_draw(draw_options)
+    pygame.display.update()
 
 #배경 벽
 def create_boundaries(space, width, height):
@@ -45,7 +49,7 @@ def create_boundaries(space, width, height):
 
 #볼1 만들기
 def create_Ball(space, radius, mass, pos):
-    body = pymunk.Body()
+    body = pymunk.Body(body_type=pymunk.Body.STATIC)
     body.position = pos
     shape = pymunk.Circle(body, radius)
     shape.mass = mass
@@ -71,6 +75,9 @@ def run(window, width, height):
     ball = None
     
     while run:
+        line = None
+        if ball and pressed_pos:
+            line = [pressed_pos,pygame.mouse.get_pos()]
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -81,13 +88,19 @@ def run(window, width, height):
                     pressed_pos = pygame.mouse.get_pos()
                     ball = create_Ball(space, 30, 100, pressed_pos)
                 elif pressed_pos:
-                    ball.body.apply_impulse_at_local_point((100000,0),(0,0))
+                    ball.body.body_type = pymunk.Body.DYNAMIC
+                    angle = calculate_angle(*line)
+                    force = calculate_distance(*line)*500
+                    fx = math.cos(angle)*force
+                    fy = math.sin(angle)*force
+                    ball.body.apply_impulse_at_local_point((fx, fy), (0,0))
                     pressed_pos = None
                 else:
                     space.remove(ball, ball.body)
                     ball = None
 
-        draw(space, window, draw_options)
+        draw(space, window, draw_options, line)
+
         space.step(dt)
         clock.tick(fps)
 
