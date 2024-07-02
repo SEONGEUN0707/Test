@@ -1,4 +1,5 @@
 import pymunk
+import pymunk.body
 import pymunk.pygame_util
 import pygame
 import math
@@ -47,6 +48,41 @@ def create_boundaries(space, width, height):
         shape.friction = 0.5
         space.add(body, shape)
 
+#구조물 만들기
+def create_structure(space, width, height):
+    brown = (139,69,19,100)
+    rects = [
+        [(600, height - 120), (40, 200), brown, 100],
+        [(900, height - 120), (40, 200), brown, 100],
+        [(750, height - 240), (340, 40), brown, 150]
+    ]
+
+    for pos, size, color, mass in rects:
+        body = pymunk.Body()
+        body.position = pos
+        shape = pymunk.Poly.create_box(body, size, radius=2)
+        shape.color = color
+        shape.mass = mass
+        shape.elasticity = 0.4
+        shape.friction = 0.4
+        space.add(body, shape)
+
+def create_pendulum(space):
+    rotation_center_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+    rotation_center_body.position = (300, 300)
+
+    body = pymunk.Body()
+    body.position = (300, 300)
+    line = pymunk.Segment(body, (0, 0), (255, 0), 5)
+    circle = pymunk.Circle(body, 40, (255, 0))
+    line.friction = 1
+    circle.friction = 1
+    line.mass = 8
+    circle.mass = 30
+    circle.elasticity = 0.9
+    rotation_center_joint = pymunk.PinJoint(body, rotation_center_body,(0,0),(0,0))
+    space.add(circle, line, body, rotation_center_joint)
+
 #볼1 만들기
 def create_Ball(space, radius, mass, pos):
     body = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -68,6 +104,8 @@ def run(window, width, height):
     space.gravity = (0,1000)
 
     create_boundaries(space, width, height)
+    create_structure(space, width, height)
+    create_pendulum(space)
 
     draw_options = pymunk.pygame_util.DrawOptions(window)
 
