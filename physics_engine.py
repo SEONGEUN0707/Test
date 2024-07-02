@@ -77,10 +77,15 @@ def run(window, width, height):
                 break
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                #ball.body.apply_impulse_at_local_point((10000,0),(0,0))
                 if not ball:
                     pressed_pos = pygame.mouse.get_pos()
                     ball = create_Ball(space, 30, 100, pressed_pos)
+                elif pressed_pos:
+                    ball.body.apply_impulse_at_local_point((100000,0),(0,0))
+                    pressed_pos = None
+                else:
+                    space.remove(ball, ball.body)
+                    ball = None
 
         draw(space, window, draw_options)
         space.step(dt)
