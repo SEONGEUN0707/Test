@@ -6,43 +6,46 @@ import math
 fps = 100
 dt = 1/fps
 
+#init
 pygame.init()
 
 WIDTH, HEIGHT = 1500, 750
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
-# 마우스가 그리는 선 길이
+# Calculate distance
 def calculate_distance(p1,p2):
     return math.sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2)
 
-# 그 길이 앵글
+# Calculate tan value
 def calculate_angle(p1,p2):
     return math.atan2(p2[1] - p1[1], p2[0] - p1[0])
 
+#visualize velocity and mass
 def visualize_velocity(window, balls, font, scale_factor: float, is_pause) -> None:
     for ball in balls:
 
         vel_x, vel_y = ball[0].body.velocity
         pos_x, pos_y = ball[0].body.position
 
-        mass_info = font.render(f"mass: {ball[0].mass}", True, (0, 0, 0))
+        mass_info = font.render(f"{int(ball[0].mass)}kg", True, (0, 0, 0))
         if is_pause:
-            vel_info = font.render(f"vel: {round(math.sqrt(math.pow(vel_x, 2) + math.pow(vel_y, 2)), 2)}", True, (0, 0, 0))
-            window.blit(vel_info, (pos_x - 10, pos_y - 50))
+            vel_info = font.render(f"{int(round(math.sqrt(math.pow(vel_x, 2) + math.pow(vel_y, 2)), 0))}m/s", True, (0, 0, 0))
+            window.blit(vel_info, (pos_x - 20, pos_y - 50))
         else:
             if ball[1]:
                 vel_x, vel_y = ball[1]
-                vel_info = font.render(f"vel: {round(math.sqrt(math.pow(vel_x, 2) + math.pow(vel_y, 2)), 2)}", True, (0, 0, 0))
-                window.blit(vel_info, (pos_x - 10, pos_y - 50))
-        window.blit(mass_info, (pos_x - 10, pos_y - 70))
+                vel_info = font.render(f"{int(round(math.sqrt(math.pow(vel_x, 2) + math.pow(vel_y, 2)), 2))}m/s", True, (0, 0, 0))
+                window.blit(vel_info, (pos_x - 20, pos_y - 50))
+        window.blit(mass_info, (pos_x - 20, pos_y - 70))
         
         pygame.draw.line(window, (225, 0, 0), (pos_x, pos_y), (pos_x + vel_x * scale_factor, pos_y + vel_y * scale_factor))
 
-# 배경 그리기
+# Draw Background
 def draw(space, window, draw_options):
     window.fill("white")
     space.debug_draw(draw_options)
 
+# Create Segment(실체 있음)
 def create_segment(space, first_pos, line):
     if line:
         body = pymunk.Body(body_type=pymunk.Body.STATIC)
@@ -53,7 +56,7 @@ def create_segment(space, first_pos, line):
     if first_pos:
         pygame.draw.line(window, "black", first_pos, pygame.mouse.get_pos(), 3)  # 3은 두께
 
-# 배경 벽
+# Create Walls
 def create_boundaries(space, width, height):
     rects = [
         [(width / 2, height - 2.5), (width, 5)],
@@ -70,7 +73,7 @@ def create_boundaries(space, width, height):
         shape.friction = 0
         space.add(body, shape)
 
-# 볼1 만들기
+# Create Ball
 def create_Ball(space, radius, mass, pos, balls, is_pause):
     if is_pause:
         body = pymunk.Body(body_type=pymunk.Body.DYNAMIC)  # is_pause가 True이면 DYNAMIC
@@ -82,11 +85,25 @@ def create_Ball(space, radius, mass, pos, balls, is_pause):
     shape.elasticity = 0
     shape.color = (199, 199, 199, 100)
     space.add(body, shape)
+    shape.collision_type = 1
     balls.append([shape, None])
     return shape, balls
 
+#Draw line(실체 없음)
 def draw_line(window, first_pos):
     pygame.draw.line(window, "black", first_pos, pygame.mouse.get_pos(), 3)
+
+#sound / detect collision
+def post_solve(arbiter, space, data):
+    impulse = abs(arbiter.total_impulse)
+    if impulse != 0:
+        print(impulse)
+        #volume = impulse  # 최대 볼륨은 1.0으로 제한
+        pygame.mixer.init()
+        collision_sound = pygame.mixer.Sound("collision_sound.mp3")
+        #collision_sound.set_volume(volume)
+        collision_sound.play()
+        return True  # 충돌 계속 처리
 
 # main
 def run(window, width, height):
@@ -101,8 +118,6 @@ def run(window, width, height):
     selected_shape = None
 
     balls = []
-
-    pygame.display.set_caption("Sootk")
     Font = pygame.font.SysFont("Consolas", 20, True, False)
 
     space = pymunk.Space()
@@ -111,10 +126,15 @@ def run(window, width, height):
     create_boundaries(space, width, height)
 
     draw_options = pymunk.pygame_util.DrawOptions(window)
-    
+
+    #충돌 핸들러
+    handler = space.add_collision_handler(1, 1)
+    handler.post_solve = post_solve
+    print(handler.post_solve)
+
     while run:
         draw(space, window, draw_options)
-
+        pygame.display.set_caption(f"Sootk / fps : {clock.get_fps()}")
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
